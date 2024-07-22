@@ -63,6 +63,8 @@ def get_posts():
     """
     sort = request.args.get('sort')
     direction = request.args.get('direction', 'asc')
+    page = int(request.args.get('page', 1))
+    limit = int(request.args.get('limit', 10))
 
     valid_sort_fields = {'title', 'content'}
     valid_directions = {'asc', 'desc'}
@@ -79,7 +81,11 @@ def get_posts():
         reverse = (direction == 'desc')
         sorted_posts = sorted(posts, key=lambda x: x[sort].lower(), reverse=reverse)
 
-    return jsonify(sorted_posts)
+    start = (page - 1) * limit
+    end = start + limit
+    paginated_posts = sorted_posts[start:end]
+
+    return jsonify(paginated_posts)
 
 
 @app.route('/api/posts/<int:id>', methods=['DELETE'])
