@@ -7,6 +7,7 @@ CORS(app)
 # A list to store the blog posts
 posts = []
 
+
 # Function to generate a new unique ID
 def generate_id():
     """
@@ -18,6 +19,7 @@ def generate_id():
     else:
         return 1
 
+
 @app.route('/')
 def index():
     """
@@ -25,6 +27,7 @@ def index():
     This prevents 404 errors when accessing the root URL.
     """
     return "Welcome to the Blog API. Use /api/posts to interact with the posts."
+
 
 @app.route('/api/posts', methods=['POST'])
 def add_post():
@@ -52,12 +55,32 @@ def add_post():
     # Return the new post with a 201 Created status
     return jsonify(new_post), 201
 
+
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
     """
     API endpoint to retrieve all blog posts.
     """
-    return jsonify(posts)
+    sort = request.args.get('sort')
+    direction = request.args.get('direction', 'asc')
+
+    valid_sort_fields = {'title', 'content'}
+    valid_directions = {'asc', 'desc'}
+
+    if sort and sort not in valid_sort_fields:
+        return jsonify({'error': 'Invalid sort field. Valid fields are title or content.'}), 400
+
+    if direction not in valid_directions:
+        return jsonify({'error': 'Invalid sort direction. Valid directions are asc or desc.'}), 400
+
+    sorted_posts = posts[:]
+
+    if sort:
+        reverse = (direction == 'desc')
+        sorted_posts = sorted(posts, key=lambda x: x[sort].lower(), reverse=reverse)
+
+    return jsonify(sorted_posts)
+
 
 @app.route('/api/posts/<int:id>', methods=['DELETE'])
 def delete_post(id):
@@ -72,6 +95,7 @@ def delete_post(id):
     # Remove the post from the list of posts
     posts.remove(post_to_delete)
     return jsonify({'message': f'Post with id {id} has been deleted successfully.'}), 200
+
 
 @app.route('/api/posts/<int:id>', methods=['PUT'])
 def update_post(id):
@@ -91,6 +115,7 @@ def update_post(id):
         post_to_update['content'] = data['content']
 
     return jsonify(post_to_update), 200
+
 
 @app.route('/api/posts/search', methods=['GET'])
 def search_posts():
@@ -112,6 +137,7 @@ def search_posts():
         filtered_posts = []
 
     return jsonify(filtered_posts)
+
 
 if __name__ == '__main__':
     # Run the Flask application on port 5002
