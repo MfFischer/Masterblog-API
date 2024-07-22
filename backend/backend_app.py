@@ -60,6 +60,21 @@ def get_posts():
     """
     return jsonify(posts)
 
+@app.route('/api/posts/<int:id>', methods=['DELETE'])
+def delete_post(id):
+    """
+    API endpoint to delete a blog post by its ID.
+    Returns a success message or an error message if the post is not found.
+    """
+    # Find the post with the given ID
+    post_to_delete = next((post for post in posts if post['id'] == id), None)
+    if post_to_delete is None:
+        return jsonify({'error': 'Post not found'}), 404
+
+    # Remove the post from the list of posts
+    posts.remove(post_to_delete)
+    return jsonify({'message': f'Post with id {id} has been deleted successfully.'}), 200
+
 if __name__ == '__main__':
     # Run the Flask application on port 5002
     app.run(host="0.0.0.0", port=5002, debug=True)
