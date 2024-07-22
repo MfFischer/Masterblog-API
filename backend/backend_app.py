@@ -44,11 +44,13 @@ def add_post():
             missing_fields.append('content')
         return jsonify({'error': f'Missing fields: {", ".join(missing_fields)}'}), 400
 
-    # Create a new post
     new_post = {
         'id': generate_id(),
         'title': data['title'],
-        'content': data['content']
+        'content': data['content'],
+        'categories': data.get('categories', []),
+        'tags': data.get('tags', []),
+        'comments': []
     }
     # Add the new post to the list of posts
     posts.append(new_post)
@@ -114,11 +116,15 @@ def update_post(id):
     if post_to_update is None:
         return jsonify({'error': 'Post not found'}), 404
 
-    # Update the post's title and/or content if provided
+    # Update the post's fields if provided
     if 'title' in data:
         post_to_update['title'] = data['title']
     if 'content' in data:
         post_to_update['content'] = data['content']
+    if 'categories' in data:
+        post_to_update['categories'] = data['categories']
+    if 'tags' in data:
+        post_to_update['tags'] = data['tags']
 
     return jsonify(post_to_update), 200
 
@@ -127,7 +133,6 @@ def update_post(id):
 def search_posts():
     """
     API endpoint to search for blog posts by title or content.
-    Takes 'title' and 'content' as query parameters.
     """
     title_query = request.args.get('title', '').lower()
     content_query = request.args.get('content', '').lower()
@@ -143,6 +148,39 @@ def search_posts():
         filtered_posts = []
 
     return jsonify(filtered_posts)
+
+
+@app.route('/api/posts/<int:post_id>/comments', methods=['POST'])
+def add_comment(post_id):
+    """
+    API endpoint to add a comment to a blog post by its ID.
+    """
+    data = request.get_json()
+    if not data or 'author' not in data or 'text' not in data:
+        return jsonify({'error': 'Missing fields: author, text'}), 400
+
+    post = next((post for post in posts if post['id'] == post_id), None)
+    if post is None:
+        return jsonify({'error': 'Post not found'}), 404
+
+    new_comment = {
+        'author': data['author'],
+        'text': data['text']
+    }
+    post['comments'].append(new_comment)
+    return jsonify(post), 201
+
+
+@app.route('/api/posts/<int:post_id>/comments', methods=['GET'])
+def get_comments(post_id):
+    """
+    API endpoint to retrieve all comments for a blog post by its ID.
+       """
+    post = next((post for post in posts if post['id'] == post_id), None)
+    if post is None:
+        return jsonify({'error': 'Post not found'}), 404
+
+    return jsonify(post['comments'])
 
 
 if __name__ == '__main__':
