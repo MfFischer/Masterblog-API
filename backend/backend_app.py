@@ -75,6 +75,25 @@ def delete_post(id):
     posts.remove(post_to_delete)
     return jsonify({'message': f'Post with id {id} has been deleted successfully.'}), 200
 
+@app.route('/api/posts/<int:id>', methods=['PUT'])
+def update_post(id):
+    """
+    API endpoint to update a blog post by its ID.
+    """
+    data = request.get_json()
+    # Find the post with the given ID
+    post_to_update = next((post for post in posts if post['id'] == id), None)
+    if post_to_update is None:
+        return jsonify({'error': 'Post not found'}), 404
+
+    # Update the post's title and/or content if provided
+    if 'title' in data:
+        post_to_update['title'] = data['title']
+    if 'content' in data:
+        post_to_update['content'] = data['content']
+
+    return jsonify(post_to_update), 200
+
 if __name__ == '__main__':
     # Run the Flask application on port 5002
     app.run(host="0.0.0.0", port=5002, debug=True)
