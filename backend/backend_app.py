@@ -56,7 +56,6 @@ def add_post():
 def get_posts():
     """
     API endpoint to retrieve all blog posts.
-    Returns a JSON list of all posts.
     """
     return jsonify(posts)
 
@@ -64,7 +63,6 @@ def get_posts():
 def delete_post(id):
     """
     API endpoint to delete a blog post by its ID.
-    Returns a success message or an error message if the post is not found.
     """
     # Find the post with the given ID
     post_to_delete = next((post for post in posts if post['id'] == id), None)
@@ -93,6 +91,27 @@ def update_post(id):
         post_to_update['content'] = data['content']
 
     return jsonify(post_to_update), 200
+
+@app.route('/api/posts/search', methods=['GET'])
+def search_posts():
+    """
+    API endpoint to search for blog posts by title or content.
+    Takes 'title' and 'content' as query parameters.
+    """
+    title_query = request.args.get('title', '').lower()
+    content_query = request.args.get('content', '').lower()
+
+    # Only filter posts if at least one query parameter is provided
+    if title_query or content_query:
+        filtered_posts = [
+            post for post in posts
+            if (title_query in post['title'].lower() if title_query else True) and
+               (content_query in post['content'].lower() if content_query else True)
+        ]
+    else:
+        filtered_posts = []
+
+    return jsonify(filtered_posts)
 
 if __name__ == '__main__':
     # Run the Flask application on port 5002
