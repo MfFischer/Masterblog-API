@@ -82,11 +82,11 @@ def get_posts():
     page = int(request.args.get('page', 1))
     limit = int(request.args.get('limit', 10))
 
-    valid_sort_fields = {'title', 'content'}
+    valid_sort_fields = {'title', 'content', 'author', 'date'}
     valid_directions = {'asc', 'desc'}
 
     if sort and sort not in valid_sort_fields:
-        return jsonify({'error': 'Invalid sort field. Valid fields are title or content.'}), 400
+        return jsonify({'error': 'Invalid sort field. Valid fields are title, content, author, date.'}), 400
 
     if direction not in valid_directions:
         return jsonify({'error': 'Invalid sort direction. Valid directions are asc or desc.'}), 400
@@ -95,7 +95,10 @@ def get_posts():
 
     if sort:
         reverse = (direction == 'desc')
-        sorted_posts = sorted(posts, key=lambda x: x[sort].lower(), reverse=reverse)
+        if sort == 'date':
+            sorted_posts = sorted(posts, key=lambda x: datetime.strptime(x['date'], '%Y-%m-%d'), reverse=reverse)
+        else:
+            sorted_posts = sorted(posts, key=lambda x: x[sort].lower(), reverse=reverse)
 
     start = (page - 1) * limit
     end = start + limit
@@ -154,20 +157,21 @@ def update_post(id):
 @app.route('/api/posts/search', methods=['GET'])
 def search_posts():
     """
-    API endpoint to search for blog posts by title or content.
+    API endpoint to search for blog posts by title, content, author, or date.
     """
     title_query = request.args.get('title', '').lower()
     content_query = request.args.get('content', '').lower()
+    author_query = request.args.get('author', '').lower()
+    date_query = request.args.get('date', '')
 
     # Only filter posts if at least one query parameter is provided
-    if title_query or content_query:
-        filtered_posts = [
-            post for post in posts
-            if (title_query in post['title'].lower() if title_query else True) and
-               (content_query in post['content'].lower() if content_query else True)
-        ]
-    else:
-        filtered_posts = []
+    filtered_posts = [
+        post for post in posts
+        if (title_query in post['title'].lower() if title_query else True) and
+           (content_query in post['content'].lower() if content_query else True) and
+           (author_query in post['author'].lower() if author_query else True) and
+           (date_query == post['date'] if date_query else True)
+    ]
 
     return jsonify(filtered_posts)
 
