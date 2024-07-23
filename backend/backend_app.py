@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_swagger_ui import get_swaggerui_blueprint
 
 app = Flask(__name__)
 CORS(app)
@@ -175,13 +176,23 @@ def add_comment(post_id):
 def get_comments(post_id):
     """
     API endpoint to retrieve all comments for a blog post by its ID.
-       """
+    """
     post = next((post for post in posts if post['id'] == post_id), None)
     if post is None:
         return jsonify({'error': 'Post not found'}), 404
 
     return jsonify(post['comments'])
 
+
+# Swagger configuration
+SWAGGER_URL = "/api/docs"
+API_URL = "/static/masterblog.json"
+swagger_ui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={'app_name': 'Masterblog API'}
+)
+app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL)
 
 if __name__ == '__main__':
     # Run the Flask application on port 5002
