@@ -12,7 +12,6 @@ CORS(app)
 def read_posts():
     """
     Read posts from the JSON file.
-    Returns an empty list if the file does not exist or is not valid JSON.
     """
     if not os.path.exists('posts.json'):
         return []
@@ -56,8 +55,6 @@ def index():
 def add_post():
     """
     API endpoint to add a new blog post.
-    Expects a JSON object with 'title', 'content', 'author', and 'date' in the request body.
-    Returns the new post with a unique ID or an error message if validation fails.
     """
     data = request.get_json()
     if not data or 'title' not in data or 'content' not in data or 'author' not in data or 'date' not in data:
@@ -89,9 +86,6 @@ def add_post():
 def get_posts():
     """
     API endpoint to retrieve all blog posts.
-    Accepts optional 'sort' and 'direction' query parameters for sorting,
-    and 'page' and 'limit' query parameters for pagination.
-    Returns a JSON list of all posts, sorted and paginated based on the provided parameters.
     """
     sort = request.args.get('sort')
     direction = request.args.get('direction', 'asc')
@@ -127,7 +121,6 @@ def get_posts():
 def delete_post(id):
     """
     API endpoint to delete a blog post by its ID.
-    Returns a success message or an error message if the post is not found.
     """
     posts = read_posts()
     post_to_delete = next((post for post in posts if post['id'] == id), None)
@@ -143,8 +136,6 @@ def delete_post(id):
 def update_post(id):
     """
     API endpoint to update a blog post by its ID.
-    Expects a JSON object with 'title', 'content', 'author', and/or 'date' in the request body.
-    Returns the updated post or an error message if the post is not found.
     """
     data = request.get_json()
     posts = read_posts()
@@ -177,8 +168,6 @@ def update_post(id):
 def search_posts():
     """
     API endpoint to search for blog posts by title, content, author, or date.
-    Takes 'title', 'content', 'author', and 'date' as query parameters.
-    Returns a list of posts that match the search criteria.
     """
     title_query = request.args.get('title', '').lower()
     content_query = request.args.get('content', '').lower()
@@ -201,8 +190,6 @@ def search_posts():
 def add_comment(post_id):
     """
     API endpoint to add a comment to a blog post by its ID.
-    Expects a JSON object with 'author' and 'text' in the request body.
-    Returns the updated post with the new comment or an error message if the post is not found.
     """
     data = request.get_json()
     if not data or 'author' not in data or 'text' not in data:
@@ -226,7 +213,6 @@ def add_comment(post_id):
 def get_comments(post_id):
     """
     API endpoint to retrieve all comments for a blog post by its ID.
-    Returns a list of comments or an error message if the post is not found.
     """
     posts = read_posts()
     post = next((post for post in posts if post['id'] == post_id), None)
