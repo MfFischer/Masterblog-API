@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
@@ -49,6 +50,12 @@ def add_post():
             missing_fields.append('date')
         return jsonify({'error': f'Missing fields: {", ".join(missing_fields)}'}), 400
 
+    # Validate date format
+    try:
+        datetime.strptime(data['date'], '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD.'}), 400
+
     new_post = {
         'id': generate_id(),
         'title': data['title'],
@@ -63,6 +70,7 @@ def add_post():
     posts.append(new_post)
     # Return the new post with a 201 Created status
     return jsonify(new_post), 201
+
 
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
@@ -130,7 +138,11 @@ def update_post(id):
     if 'author' in data:
         post_to_update['author'] = data['author']
     if 'date' in data:
-        post_to_update['date'] = data['date']
+        try:
+            datetime.strptime(data['date'], '%Y-%m-%d')
+            post_to_update['date'] = data['date']
+        except ValueError:
+            return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD.'}), 400
     if 'categories' in data:
         post_to_update['categories'] = data['categories']
     if 'tags' in data:
