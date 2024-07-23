@@ -36,19 +36,25 @@ def add_post():
     API endpoint to add a new blog post.
     """
     data = request.get_json()
-    if not data or 'title' not in data or 'content' not in data:
+    if not data or 'title' not in data or 'content' not in data or 'author' not in data or 'date' not in data:
         # Identify missing fields and return a 400 Bad Request error
         missing_fields = []
         if 'title' not in data:
             missing_fields.append('title')
         if 'content' not in data:
             missing_fields.append('content')
+        if 'author' not in data:
+            missing_fields.append('author')
+        if 'date' not in data:
+            missing_fields.append('date')
         return jsonify({'error': f'Missing fields: {", ".join(missing_fields)}'}), 400
 
     new_post = {
         'id': generate_id(),
         'title': data['title'],
         'content': data['content'],
+        'author': data['author'],
+        'date': data['date'],
         'categories': data.get('categories', []),
         'tags': data.get('tags', []),
         'comments': []
@@ -57,7 +63,6 @@ def add_post():
     posts.append(new_post)
     # Return the new post with a 201 Created status
     return jsonify(new_post), 201
-
 
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
@@ -122,6 +127,10 @@ def update_post(id):
         post_to_update['title'] = data['title']
     if 'content' in data:
         post_to_update['content'] = data['content']
+    if 'author' in data:
+        post_to_update['author'] = data['author']
+    if 'date' in data:
+        post_to_update['date'] = data['date']
     if 'categories' in data:
         post_to_update['categories'] = data['categories']
     if 'tags' in data:
