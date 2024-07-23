@@ -2,20 +2,41 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
 from datetime import datetime
+import json
+import os
 
 app = Flask(__name__)
 CORS(app)
 
-# A list to store the blog posts
-posts = []
+
+def read_posts():
+    """
+    Read posts from the JSON file.
+    Returns an empty list if the file does not exist or is not valid JSON.
+    """
+    if not os.path.exists('posts.json'):
+        return []
+    with open('posts.json', 'r') as file:
+        try:
+            return json.load(file)
+        except json.JSONDecodeError:
+            return []
 
 
-# Function to generate a new unique ID
+def write_posts(posts):
+    """
+    Write posts to the JSON file.
+    """
+    with open('posts.json', 'w') as file:
+        json.dump(posts, file, indent=4)
+
+
 def generate_id():
     """
     Generate a unique ID for a new blog post.
     The ID is the increment of the last post's ID, or 1 if the list is empty.
     """
+    posts = read_posts()
     if posts:
         return posts[-1]['id'] + 1
     else:
@@ -35,27 +56,20 @@ def index():
 def add_post():
     """
     API endpoint to add a new blog post.
+    Expects a JSON object with 'title', 'content', 'author', and 'date' in the request body.
+    Returns the new post with a unique ID or an error message if validation fails.
     """
     data = request.get_json()
     if not data or 'title' not in data or 'content' not in data or 'author' not in data or 'date' not in data:
-        # Identify missing fields and return a 400 Bad Request error
-        missing_fields = []
-        if 'title' not in data:
-            missing_fields.append('title')
-        if 'content' not in data:
-            missing_fields.append('content')
-        if 'author' not in data:
-            missing_fields.append('author')
-        if 'date' not in data:
-            missing_fields.append('date')
+        missing_fields = [field for field in ['title', 'content', 'author', 'date'] if field not in data]
         return jsonify({'error': f'Missing fields: {", ".join(missing_fields)}'}), 400
 
-    # Validate date format
     try:
         datetime.strptime(data['date'], '%Y-%m-%d')
     except ValueError:
         return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD.'}), 400
 
+    posts = read_posts()
     new_post = {
         'id': generate_id(),
         'title': data['title'],
@@ -66,9 +80,8 @@ def add_post():
         'tags': data.get('tags', []),
         'comments': []
     }
-    # Add the new post to the list of posts
     posts.append(new_post)
-    # Return the new post with a 201 Created status
+    write_posts(posts)
     return jsonify(new_post), 201
 
 
@@ -76,6 +89,9 @@ def add_post():
 def get_posts():
     """
     API endpoint to retrieve all blog posts.
+    Accepts optional 'sort' and 'direction' query parameters for sorting,
+    and 'page' and 'limit' query parameters for pagination.
+    Returns a JSON list of all posts, sorted and paginated based on the provided parameters.
     """
     sort = request.args.get('sort')
     direction = request.args.get('direction', 'asc')
@@ -91,18 +107,18 @@ def get_posts():
     if direction not in valid_directions:
         return jsonify({'error': 'Invalid sort direction. Valid directions are asc or desc.'}), 400
 
-    sorted_posts = posts[:]
+    posts = read_posts()
 
     if sort:
         reverse = (direction == 'desc')
         if sort == 'date':
-            sorted_posts = sorted(posts, key=lambda x: datetime.strptime(x['date'], '%Y-%m-%d'), reverse=reverse)
+            posts = sorted(posts, key=lambda x: datetime.strptime(x['date'], '%Y-%m-%d'), reverse=reverse)
         else:
-            sorted_posts = sorted(posts, key=lambda x: x[sort].lower(), reverse=reverse)
+            posts = sorted(posts, key=lambda x: x[sort].lower(), reverse=reverse)
 
     start = (page - 1) * limit
     end = start + limit
-    paginated_posts = sorted_posts[start:end]
+    paginated_posts = posts[start:end]
 
     return jsonify(paginated_posts)
 
@@ -111,14 +127,15 @@ def get_posts():
 def delete_post(id):
     """
     API endpoint to delete a blog post by its ID.
+    Returns a success message or an error message if the post is not found.
     """
-    # Find the post with the given ID
+    posts = read_posts()
     post_to_delete = next((post for post in posts if post['id'] == id), None)
     if post_to_delete is None:
         return jsonify({'error': 'Post not found'}), 404
 
-    # Remove the post from the list of posts
     posts.remove(post_to_delete)
+    write_posts(posts)
     return jsonify({'message': f'Post with id {id} has been deleted successfully.'}), 200
 
 
@@ -126,14 +143,15 @@ def delete_post(id):
 def update_post(id):
     """
     API endpoint to update a blog post by its ID.
+    Expects a JSON object with 'title', 'content', 'author', and/or 'date' in the request body.
+    Returns the updated post or an error message if the post is not found.
     """
     data = request.get_json()
-    # Find the post with the given ID
+    posts = read_posts()
     post_to_update = next((post for post in posts if post['id'] == id), None)
     if post_to_update is None:
         return jsonify({'error': 'Post not found'}), 404
 
-    # Update the post's fields if provided
     if 'title' in data:
         post_to_update['title'] = data['title']
     if 'content' in data:
@@ -151,6 +169,7 @@ def update_post(id):
     if 'tags' in data:
         post_to_update['tags'] = data['tags']
 
+    write_posts(posts)
     return jsonify(post_to_update), 200
 
 
@@ -158,13 +177,15 @@ def update_post(id):
 def search_posts():
     """
     API endpoint to search for blog posts by title, content, author, or date.
+    Takes 'title', 'content', 'author', and 'date' as query parameters.
+    Returns a list of posts that match the search criteria.
     """
     title_query = request.args.get('title', '').lower()
     content_query = request.args.get('content', '').lower()
     author_query = request.args.get('author', '').lower()
     date_query = request.args.get('date', '')
 
-    # Only filter posts if at least one query parameter is provided
+    posts = read_posts()
     filtered_posts = [
         post for post in posts
         if (title_query in post['title'].lower() if title_query else True) and
@@ -180,11 +201,14 @@ def search_posts():
 def add_comment(post_id):
     """
     API endpoint to add a comment to a blog post by its ID.
+    Expects a JSON object with 'author' and 'text' in the request body.
+    Returns the updated post with the new comment or an error message if the post is not found.
     """
     data = request.get_json()
     if not data or 'author' not in data or 'text' not in data:
         return jsonify({'error': 'Missing fields: author, text'}), 400
 
+    posts = read_posts()
     post = next((post for post in posts if post['id'] == post_id), None)
     if post is None:
         return jsonify({'error': 'Post not found'}), 404
@@ -194,6 +218,7 @@ def add_comment(post_id):
         'text': data['text']
     }
     post['comments'].append(new_comment)
+    write_posts(posts)
     return jsonify(post), 201
 
 
@@ -201,7 +226,9 @@ def add_comment(post_id):
 def get_comments(post_id):
     """
     API endpoint to retrieve all comments for a blog post by its ID.
+    Returns a list of comments or an error message if the post is not found.
     """
+    posts = read_posts()
     post = next((post for post in posts if post['id'] == post_id), None)
     if post is None:
         return jsonify({'error': 'Post not found'}), 404
